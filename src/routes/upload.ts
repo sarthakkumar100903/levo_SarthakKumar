@@ -1,4 +1,4 @@
-// src/routes/upload.ts
+// routes for all upload requests api
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
@@ -8,10 +8,19 @@ import db from '../db';
 
 const router = Router();
 
-// Setup multer to store files in memory
+// multer to store files in memory
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper to parse JSON/YAML
+/**
+ * Helper function to validate and parse the uploaded schema file.
+ * It checks for .json, .yaml, or .yml extensions and attempts to parse the content.
+ * Parameters
+ * buffer The file content as a Buffer.
+ * filename The original name of the file.
+ * Output:
+ * @returns A parsed JavaScript object from the file content.
+ * @throws An error if the file type is unsupported or if parsing fails.
+ */
 function parseSpec(buffer: Buffer, filename: string): object {
   const ext = path.extname(filename).toLowerCase();
   const content = buffer.toString('utf8');
@@ -28,7 +37,16 @@ function parseSpec(buffer: Buffer, filename: string): object {
   }
 }
 
-// POST /upload
+/**
+ * POST /upload
+ * Uploads a schema file, versions it, and stores its metadata.
+ * It validates the file to ensure it is valid JSON or YAML before processing.
+ * Parameters
+ * @body {multipart/form-data}
+ * file {file} - The OpenAPI/schema file (.json or .yaml) to be uploaded. (required)
+ * application {string} - The name of the application the schema belongs to. (required)
+ * [service] {string}  - The optional name of the service within the application. (optional)
+ */
 router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
   try {
     const { application, service } = req.body;
@@ -41,15 +59,14 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       return res.status(400).json({ error: 'file is required' });
     }
 
-    // Validate JSON/YAML
+    // Validate that the schema is a parseable JSON/YAML file
     parseSpec(file.buffer, file.originalname);
 
-    // Ensure folder exists under data/schemas
+    // Ensuring folder exists in memory
     const baseDir = path.join(process.cwd(), 'data', 'schemas'); // 👈 stable base dir
     const folder = path.join(baseDir, application, service || '__app');
     fs.mkdirSync(folder, { recursive: true });
 
-    // Calculate checksum
     const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
     // Insert application if not exists
@@ -72,13 +89,13 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       serviceId = srow.id;
     }
 
-    // Get application ID
+    // Get application ID from request
     const appRow = db.prepare('SELECT id FROM application WHERE name = ?').get(application) as
       | { id: number }
       | undefined;
     if (!appRow) return res.status(500).json({ error: 'Application row not found' });
 
-    // Determine last version
+    // Determine last version to calculate the new version number
     const lastRow = service
       ? (db
           .prepare(
@@ -93,15 +110,14 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
     const version = (lastRow?.v || 0) + 1;
 
-    // Save file
+    // Save file to disk
     const filename = `${version}-${file.originalname}`;
     const absPath = path.join(folder, filename);
     fs.writeFileSync(absPath, file.buffer);
 
-    // Store relative path in DB (portable)
     const relativePath = path.relative(process.cwd(), absPath);
 
-    // Insert row with path
+    // Insert metadata row into the db
     db.prepare(
       'INSERT INTO schema_version (filename, checksum, version, applicationId, serviceId, path) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(file.originalname, checksum, version, appRow.id, serviceId, relativePath);
@@ -111,7 +127,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       application,
       service: service || null,
       version,
-      path: relativePath, // return relative path
+      path: relativePath,
       checksum,
     });
   } catch (err: unknown) {

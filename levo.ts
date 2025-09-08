@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+// frontend ui to run functions on cli
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import axios from 'axios';
@@ -7,10 +7,13 @@ import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
 
+// The base URL of the API server
 const API_URL = 'http://localhost:3000';
 
 yargs(hideBin(process.argv))
   .scriptName("levo")
+
+  // Defines the 'import' command for uploading a schema
   .command(
     'import',
     'Import an OpenAPI spec',
@@ -60,6 +63,8 @@ yargs(hideBin(process.argv))
       }
     },
   )
+
+  // Defines the 'get' command for retrieving a schema
   .command(
     'get',
     'Get a schema',
@@ -75,7 +80,7 @@ yargs(hideBin(process.argv))
           type: 'string',
           description: 'The service name (optional)',
         })
-        .option('schema-version', { // <-- RENAMED from 'version'
+        .option('schema-version', {
           alias: 'v',
           type: 'string',
           description: 'The version to fetch (e.g., "latest" or a number)',
@@ -83,11 +88,11 @@ yargs(hideBin(process.argv))
         });
     },
     async (argv) => {
-      // yargs camelCases schema-version to schemaVersion
       const { application, service, schemaVersion } = argv;
+      
       const params = new URLSearchParams({
         application,
-        version: schemaVersion, // Pass it as 'version' in the query
+        version: schemaVersion,
       });
       if (service) {
         params.append('service', service);
@@ -105,4 +110,5 @@ yargs(hideBin(process.argv))
   )
   .demandCommand(1, 'You need to provide a command (import or get).')
   .help()
-  .strict().argv;
+  .strict()
+  .argv;

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER NOT NULL,
     applicationId INTEGER NOT NULL,
     serviceId INTEGER,
-    path TEXT NOT NULL,  -- 👈 NEW COLUMN to store relative file path
+    path TEXT NOT NULL,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(applicationId) REFERENCES application(id),
     FOREIGN KEY(serviceId) REFERENCES service(id)

@@ -1,4 +1,4 @@
-// routes/schema.ts
+// Api router for Get Schema requests
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -6,7 +6,7 @@ import db from '../db';
 
 const router = Router();
 
-// Types for DB rows
+// Types for each row in DB
 interface ApplicationRow { id: number }
 interface ServiceRow { id: number }
 interface VersionRow {
@@ -17,9 +17,17 @@ interface VersionRow {
   filename: string;
   checksum: string;
   path: string;
-  createdAt?: string; // 👈 correct column name
+  createdAt?: string; 
 }
 
+/** 
+ * GET /schema
+ * Get Request to fetch the latest or specific version of an application or service
+ * Parameters
+ * application {string}- The name of the application.(required)
+ * service {string} - The name of the service (optional).
+ * version=latest {string}- The version to retrieve (e.g., "1", "2", or "latest"). (optional default=latest)
+ */
 router.get('/schema', (req: Request, res: Response) => {
   try {
     const application = String(req.query.application || '').trim();
@@ -38,7 +46,7 @@ router.get('/schema', (req: Request, res: Response) => {
       serviceId = srow.id;
     }
 
-    // determine version
+    // check version
     let versionNumber: number | null = null;
     if (versionQ === 'latest') {
       const r = service
@@ -80,6 +88,12 @@ router.get('/schema', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /schema/versions
+ * Lists all available schema versions for a given application and optional service.
+ * application  {string} - The name of the application.
+ * service {string} - The name of the service (optional).
+ */
 router.get('/schema/versions', (req: Request, res: Response) => {
   try {
     const application = String(req.query.application || '').trim();

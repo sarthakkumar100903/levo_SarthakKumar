@@ -1,23 +1,23 @@
-// src/__tests__/api.test.ts
+//  Tests File with testcases for all apis
 
 import request from 'supertest';
-import app from '../index'; // Import your express app
+import app from '../index';
 import db from '../db';
 import path from 'path';
 import fs from 'fs';
 
-// Helper to get the absolute path to the test file
+// Helper for the test file
 const testFilePath = path.resolve(__dirname, '../../openapi.yaml');
 
 describe('Schema API', () => {
-  // Before each test, we'll clean the database to ensure a fresh start
+  // cleaning the database before each test
   beforeEach(() => {
     db.exec('DELETE FROM schema_version');
     db.exec('DELETE FROM service');
     db.exec('DELETE FROM application');
   });
 
-  // Clean up the created schema files after all tests are done
+  // Clean up the database after all tests
   afterAll(() => {
     const schemasDir = path.resolve(__dirname, '../../data/schemas/test-app');
     if (fs.existsSync(schemasDir)) {
@@ -25,6 +25,7 @@ describe('Schema API', () => {
     }
   });
 
+  //Test 1 for POST /upload
   describe('POST /upload', () => {
     it('should upload a schema for a new application and return version 1', async () => {
       const res = await request(app)
@@ -64,7 +65,7 @@ describe('Schema API', () => {
       expect(res.body).toHaveProperty('error', 'application is required');
     });
   });
-
+  //Test 2 for GET /schema
   describe('GET /schema', () => {
     // Before testing GET, we need to upload some schemas
     beforeEach(async () => {

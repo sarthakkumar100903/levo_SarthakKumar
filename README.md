@@ -1,56 +1,172 @@
-# Schema Versioning API
+# Levo Applicaton Schema API
 
-This project provides a simple yet powerful API for uploading, versioning, and retrieving OpenAPI schemas. It's designed to mimic a core piece of functionality for a CI/CD-based API testing tool.
+A Node.js API and command-line tool for uploading, versioning, and retrieving API schemas. This project provides a robust system for managing API specifications, inspired by the CI/CD workflows used in modern API testing tools.
 
-## Tech Stack
+## About The Project
 
--   **Backend**: Node.js, Express.js, TypeScript
--   **Database**: SQLite (using `better-sqlite3`)
--   **File Handling**: `multer` for multipart/form-data
--   **Testing**: Jest & Supertest
--   **CLI Tool**: `yargs`
+This project builds a persistent, versioned storage system for OpenAPI schemas. It lets developers upload new schema versions, retrieve past versions, and view all available versions—similar to the core infrastructure used in automated pen-testing tools like Levo.ai
+
+Problem Statement: https://doc.clickup.com/10505733/d/h/a0kg5-661/f845f8c6bd3c8f4
 
 ---
 
-## Getting Started
+## Tech Stack
 
-### Prerequisites
+* **Backend**: Node.js, Express.js, TypeScript
+* **Database**: SQLite (`better-sqlite3`)
+* **CLI**: `yargs` (for cli implementation)
+* **Testing**: Jest, Supertest
 
--   Node.js (v20.x or higher recommended)
--   npm
+---
 
-### Setup
 
-1.  **Clone the repository** (if applicable)
+## Installation & Setup
 
-2.  **Install dependencies**:
+1.  **Install NPM packages**:
     ```bash
     npm install
     ```
 
-3.  **Run the development server**:
+2.  **Run the development server**:
     ```bash
     npm run dev
     ```
-    The server will start on `http://localhost:3000` and automatically restart when you make changes.
+    The API will now be running on `http://localhost:3000`.
 
 ---
 
-## API Endpoints
+## Complete Walkthrough
 
-### 1. Upload a Schema
+This guide will walk you through a complete scenario for an application named `e-commerce-platform`.
 
-Uploads a schema file and creates a new version for the specified application/service.
+### Step 1: Uploading Schemas (Versioning in Action)
 
--   **Endpoint**: `POST /upload`
--   **Method**: `POST`
--   **Content-Type**: `multipart/form-data`
+The `import` command uploads a schema. If a schema for the given application/service already exists, this will create a new, incremented version, preserving the old one.
 
-**Parameters**:
--   `file` (file, required): The OpenAPI spec file (`.json` or `.yaml`).
--   `application` (string, required): The name of the application.
--   `service` (string, optional): The name of the service within the application.
+**A. Upload Version 1 for the main application**
+This schema represents the main API for the entire platform.
 
-**Example `curl`**:
-```bash
-curl -F "file=@./openapi.yaml" -F "application=ecom" -F "service=checkout" http://localhost:3000/upload
+* **Using the CLI:**
+    ```bash
+    npx ts-node levo.ts import --spec ./openapi.yaml --application e-commerce-platform
+    ```
+    *You will see a success message with `"version": 1`.*
+
+* **Using `curl`:**
+    ```bash
+    curl -F "file=@./openapi.yaml" -F "application=e-commerce-platform" http://localhost:3000/upload
+    ```
+
+**B. Upload Version 2 for the main application**
+Now, let's say you've updated the main API. Uploading the same file again creates a new version.
+
+* **Using the CLI:**
+    ```bash
+    npx ts-node levo.ts import --spec ./openapi.yaml --application e-commerce-platform
+    ```
+    *You will see a success message with `"version": 2`.*
+
+* **Using `curl`:**
+    ```bash
+    curl -F "file=@./openapi.yaml" -F "application=e-commerce-platform" http://localhost:3000/upload
+    ```
+
+**C. Upload Version 1 for a specific `payment-service`**
+This schema is only for the payment service within the e-commerce platform.
+
+* **Using the CLI:**
+    ```bash
+    npx ts-node levo.ts import --spec ./payment.json --application e-commerce-platform --service payment-service
+    ```
+    *(Note: We can create a dummy `payment.json` file for this example.)*
+
+* **Using `curl`:**
+    ```bash
+    curl -F "file=@./payment.json" -F "application=e-commerce-platform" -F "service=payment-service" http://localhost:3000/upload
+    ```
+
+### Step 2: Listing All Available Versions
+
+The `GET /schema/versions` endpoint allows you to see all historical versions for an application or service.
+
+**A. List versions for the main application**
+
+* **Using `curl`:**
+    ```bash
+    curl "http://localhost:3000/schema/versions?application=e-commerce-platform"
+    ```
+    *This will return a list containing both version 2 and version 1.*
+
+**B. List versions for the `payment-service`**
+
+* **Using `curl`:**
+    ```bash
+    curl "http://localhost:3000/schema/versions?application=e-commerce-platform&service=payment-service"
+    ```
+    *This will return a list containing only version 1 for the payment service.*
+
+### Step 3: Retrieving a Specific Schema
+
+The `get` command retrieves a schema's full content and metadata.
+
+**A. Get the LATEST version for the main application**
+This will retrieve version 2, as it was the last one uploaded.
+
+* **Using the CLI:**
+    ```bash
+    npx ts-node levo.ts get --application e-commerce-platform
+    ```
+
+* **Using `curl`:**
+    ```bash
+    # You can specify 'latest' or omit the version parameter entirely
+    curl "http://localhost:3000/schema?application=e-commerce-platform&version=latest"
+    ```
+
+**B. Get an OLDER version for the main application**
+Let's retrieve the original version 1.
+
+* **Using the CLI:**
+    ```bash
+    npx ts-node levo.ts get --application e-commerce-platform --schema-version 1
+    ```
+
+* **Using `curl`:**
+    ```bash
+    curl "http://localhost:3000/schema?application=e-commerce-platform&version=1"
+    ```
+
+**C. Get the LATEST version for the `payment-service`**
+
+* **Using the CLI:**
+    ```bash
+    npx ts-node levo.ts get --application e-commerce-platform --service payment-service
+    ```
+
+* **Using `curl`:**
+    ```bash
+    curl "http://localhost:3000/schema?application=e-commerce-platform&service=payment-service"
+    ```
+
+---
+
+## Testing
+
+Have added automated tests to ensure the API's functionality and reliability.
+
+* **Run all tests:**
+    ```bash
+    npm test
+    ```
+
+---
+
+## Code Quality
+
+Code style is enforced by ESLint and Prettier to ensure consistency and readability.
+
+* **Run the linter:**
+    ```bash
+    npm run lint
+    ```
+```eof
